@@ -25,3 +25,8 @@ class Task(Base):
         String(20),
         default="QUEUED"
     )
+
+    result: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True
+    )
