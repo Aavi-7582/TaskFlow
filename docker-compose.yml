@@ -18,5 +18,41 @@ services:
     ports:
       - "6379:6379"
 
+  worker1:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    container_name: taskflow-worker-1
+    environment:
+      DATABASE_URL: "postgresql://taskflow:taskflow@postgres:5432/taskflow"
+      REDIS_URL: "redis://redis:6379/0"
+    depends_on:
+      - redis
+      - postgres
+
+  worker2:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    container_name: taskflow-worker-2
+    environment:
+      DATABASE_URL: "postgresql://taskflow:taskflow@postgres:5432/taskflow"
+      REDIS_URL: "redis://redis:6379/0"
+    depends_on:
+      - redis
+      - postgres
+
+  worker3:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    container_name: taskflow-worker-3
+    environment:
+      DATABASE_URL: "postgresql://taskflow:taskflow@postgres:5432/taskflow"
+      REDIS_URL: "redis://redis:6379/0"
+    depends_on:
+      - redis
+      - postgres
+
 volumes:
-  postgres_data:  
+  postgres_data:

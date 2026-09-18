@@ -1,5 +1,6 @@
 import sys
 import os
+import uuid
 
 sys.path.append(
     os.path.abspath(
@@ -12,10 +13,11 @@ from database import SessionLocal
 from models import Task
 from executor import execute_task
 
+WORKER_ID = str(uuid.uuid4())[:8]
 
 def run_worker():
 
-    print("Worker started...")
+    print(f"Worker {WORKER_ID} started...")
 
     while True:
 
@@ -28,7 +30,7 @@ def run_worker():
 
         _, task_id = result
 
-        print(f"Received task: {task_id}")
+        print(f"Worker {WORKER_ID} received task: {task_id}")
 
         db = SessionLocal()
 
@@ -52,11 +54,13 @@ def run_worker():
 
             db.commit()
 
-            print(f"Task {task.id} completed: {result}")
+            print(
+                f"Worker {WORKER_ID} completed task {task.id}: {result}"
+            )
 
         except Exception as e:
 
-            print(f"Task failed: {e}")
+            print(f"Worker {WORKER_ID} failed to complete task {task.id}: {e}")
 
             task.status = "FAILED"
             db.commit()
