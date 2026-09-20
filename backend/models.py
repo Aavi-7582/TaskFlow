@@ -30,3 +30,40 @@ class Task(Base):
         String,
         nullable=True
     )
+
+    worker_id: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True
+    )
+
+    retry_count: Mapped[int] = mapped_column(
+        Integer,
+        default=0
+    )
+
+from datetime import datetime
+from sqlalchemy import DateTime
+
+
+class Worker(Base):
+    __tablename__ = "workers"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    worker_id: Mapped[str] = mapped_column(
+        String(50),
+        unique=True
+    )
+
+    last_heartbeat: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(20),
+        default="ACTIVE"
+    )
