@@ -20,6 +20,11 @@ from database import SessionLocal
 from models import Task
 from executor import execute_task
 
+# How often this worker refreshes its heartbeat. Kept short so the monitor
+# (worker/monitor.py) can notice a dead worker within ~2s.
+# Override with the HEARTBEAT_INTERVAL env var if a slower beat is wanted.
+HEARTBEAT_INTERVAL = float(os.environ.get("HEARTBEAT_INTERVAL", "1"))
+
 WORKER_ID = str(uuid.uuid4())[:8]
 
 db = SessionLocal()
@@ -107,7 +112,7 @@ def heartbeat(db, worker_id):
             worker.status = "ACTIVE"
             db.commit()
 
-        time.sleep(5)
+        time.sleep(HEARTBEAT_INTERVAL)
 
 if __name__ == "__main__":
     run_worker()
