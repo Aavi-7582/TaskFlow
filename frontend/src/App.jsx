@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getStats, getWorkers, getTasks } from "./api";
+import { getStats, getWorkers, getTasks, createTask } from "./api";
 import "./App.css";
 
 function App() {
@@ -13,6 +13,10 @@ function App() {
   const [workers, setWorkers] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [wsStatus, setWsStatus] = useState("Connecting");
+  const [taskType, setTaskType] = useState("fibonacci");
+  const [payloadValue, setPayloadValue] = useState("20");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState(null);
 
   const loadData = async () => {
     try {
@@ -29,6 +33,38 @@ function App() {
       console.error("Failed to load dashboard data:", error);
     }
   };
+
+  const handleSubmitTask = async (e) => {
+  e.preventDefault();
+  setSubmitting(true);
+  setSubmitMessage(null);
+
+  const payload =
+    taskType === "fibonacci"
+      ? { n: Number(payloadValue) }
+      : { seconds: Number(payloadValue) };
+
+  try {
+    const response = await createTask({
+      task_type: taskType,
+      payload,
+    });
+
+    setSubmitMessage({
+      type: "success",
+      text: `Task #${response.data.id} submitted successfully!`,
+    });
+
+    loadData();
+  } catch (error) {
+    setSubmitMessage({
+      type: "error",
+      text: error.response?.data?.detail || "Failed to submit task.",
+    });
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   useEffect(() => {
     let socket = null;
@@ -111,6 +147,51 @@ function App() {
       </header>
 
       <main>
+        <section className="panel submit-panel">
+  <div className="section-header">
+    <h2>Submit Task</h2>
+    <span>Enqueue a new job</span>
+  </div>
+
+  <form className="task-form" onSubmit={handleSubmitTask}>
+    <label>
+      Task Type
+      <select
+        value={taskType}
+        onChange={(e) => {
+          setTaskType(e.target.value);
+          setPayloadValue(e.target.value === "fibonacci" ? "20" : "5");
+          setSubmitMessage(null);
+        }}
+      >
+        <option value="fibonacci">Fibonacci</option>
+        <option value="sleep">Sleep</option>
+      </select>
+    </label>
+
+    <label>
+      {taskType === "fibonacci" ? "Number (n)" : "Duration (seconds)"}
+      <input
+        type="number"
+        min="1"
+        max={taskType === "fibonacci" ? "40" : "300"}
+        value={payloadValue}
+        onChange={(e) => setPayloadValue(e.target.value)}
+        required
+      />
+    </label>
+
+    <button type="submit" disabled={submitting}>
+      {submitting ? "Submitting..." : "Submit Task"}
+    </button>
+  </form>
+
+  {submitMessage && (
+    <p className={`submit-message ${submitMessage.type}`}>
+      {submitMessage.text}
+    </p>
+  )}
+</section>
         {/* Stats */}
         <section>
           <h2>System Overview</h2>

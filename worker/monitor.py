@@ -34,7 +34,7 @@ import time
 from datetime import datetime, timezone, timedelta
 
 from database import SessionLocal, engine
-from sqlalchemy import func
+from sqlalchemy import func, update
 
 # Detection tuning (env-overridable so latency can be changed without
 # touching code):
@@ -109,11 +109,31 @@ def monitor_workers():
                         ).all()
 
                         for task in tasks:
-                            if task.retry_count < MAX_RETRIES:
-                                task.retry_count += 1
-                                task.status = "QUEUED"
-                                task.worker_id = None
+                            # Atomic requeue: increment retry_count IN THE DATABASE
+                            # (column-relative, not a value read into Python) and
+                            # only apply it if the task is STILL owned here, STILL
+                            # RUNNING, and UNDER the retry cap. Incrementing
+                            # server-side makes this safe even if more than one
+                            # monitor is run, and the extra "retry_count <
+                            # MAX_RETRIES" predicate means the cap can never be
+                            # exceeded. A stale worker's late completion cannot
+                            # requeue a task it no longer owns.
+                            requeued = db.execute(
+                                update(Task)
+                                .where(
+                                    Task.id == task.id,
+                                    Task.worker_id == worker.worker_id,
+                                    Task.status == "RUNNING",
+                                    Task.retry_count < MAX_RETRIES,
+                                )
+                                .values(
+                                    retry_count=Task.retry_count + 1,
+                                    status="QUEUED",
+                                    worker_id=None,
+                                )
+                            )
 
+                            if requeued.rowcount == 1:
                                 redis_client.rpush(
                                     "task_queue",
                                     task.id
@@ -121,23 +141,52 @@ def monitor_workers():
 
                                 print(
                                     f"Requeued task {task.id} "
-                                    f"(retry {task.retry_count}/{MAX_RETRIES})"
+                                    f"(retry {task.retry_count + 1}/{MAX_RETRIES})"
                                 )
+
+                                notify_frontend({
+                                    "type": "task_update",
+                                    "task_id": task.id,
+                                    "status": "QUEUED",
+                                    "worker_id": None,
+                                })
 
                             else:
-                                task.status = "FAILED"
-
-                                print(
-                                    f"Task {task.id} permanently failed"
+                                # Not requeued: either the retry cap was reached,
+                                # or another cycle/worker already moved this
+                                # task. If it is STILL owned here and STILL
+                                # RUNNING, the cap has been hit -> fail
+                                # permanently. This UPDATE is atomic too, so at
+                                # most one caller can ever win it.
+                                failed = db.execute(
+                                    update(Task)
+                                    .where(
+                                        Task.id == task.id,
+                                        Task.worker_id == worker.worker_id,
+                                        Task.status == "RUNNING",
+                                    )
+                                    .values(status="FAILED")
                                 )
 
-                            notify_frontend({
-                                "type": "task_update",
-                                "task_id": task.id,
-                                "status": task.status,
-                                "worker_id": task.worker_id,
-                            })
+                                if failed.rowcount == 1:
+                                    print(
+                                        f"Task {task.id} permanently failed"
+                                    )
 
+                                    notify_frontend({
+                                        "type": "task_update",
+                                        "task_id": task.id,
+                                        "status": "FAILED",
+                                        "worker_id": task.worker_id,
+                                    })
+                                else:
+                                    print(
+                                        f"Task {task.id} no longer RUNNING on "
+                                        f"{worker.worker_id}; left unchanged"
+                                    )
+
+            # Persist this cycle's changes: worker DEAD transitions plus the
+            # conditional requeue / permanent-fail task updates above.
             db.commit()
 
             signature = dashboard_signature(db)

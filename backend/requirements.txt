@@ -1,6 +1,10 @@
 fastapi
 uvicorn
 redis
-sqlalchemy
+# Pinned: SQLAlchemy 2.1+ changes the bare "postgresql://" scheme to default
+# to the psycopg (v3) driver, which is NOT installed here (we ship
+# psycopg2-binary). Keep 2.0.x so "postgresql://" resolves to psycopg2 and
+# freshly-built worker Docker images stay reproducible.
+sqlalchemy==2.0.54
 psycopg2-binary
 pydantic-settings

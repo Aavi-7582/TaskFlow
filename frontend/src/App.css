@@ -270,3 +270,60 @@ tbody tr:hover {
     grid-template-columns: 1fr;
   }
 }
+
+.task-form {
+  display: flex;
+  align-items: end;
+  gap: 16px;
+  padding: 20px;
+  flex-wrap: wrap;
+}
+
+.task-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #aeb5c5;
+  font-size: 13px;
+  flex: 1;
+  min-width: 160px;
+}
+
+.task-form input,
+.task-form select {
+  padding: 11px 12px;
+  background: #0f1117;
+  border: 1px solid #343949;
+  border-radius: 6px;
+  color: #e6e9ef;
+  font: inherit;
+}
+
+.task-form button {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 6px;
+  background: #3b82f6;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.task-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.submit-message {
+  padding: 0 20px 16px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.submit-message.success {
+  color: #36d399;
+}
+
+.submit-message.error {
+  color: #f87171;
+}

@@ -7,3 +7,4 @@ const API = axios.create({
 export const getStats = () => API.get("/stats");
 export const getWorkers = () => API.get("/workers");
 export const getTasks = () => API.get("/tasks");
+export const createTask = (task) => API.post("/tasks", task);
