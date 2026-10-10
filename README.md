@@ -29,7 +29,7 @@ TaskFlow separates task submission, job execution, and failure monitoring into i
 ### System Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     User([User]) --> UI[React Dashboard]
     UI -->|REST| API[FastAPI Backend]
     API -->|save task| PG[(PostgreSQL)]
